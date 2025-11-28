@@ -4,10 +4,14 @@ const path = require('path');
 
 const express = require('express');
 const mongoose = require('mongoose');
+const cors = require('cors');   // ← 新增这一行
+
 
 const app = express();
 app.use(express.json());
+app.use(cors());                // ← 新增这一行
 app.use(express.static('public'));
+
 
 // 1. 连接 MongoDB
 // 优先用环境变量中的 MongoDB 地址，没有的话就用本地 MongoDB
@@ -30,6 +34,18 @@ const todoSchema = new mongoose.Schema(
 );
 
 const Todo = mongoose.model('Todo', todoSchema);
+// 文章 Post 模型
+const postSchema = new mongoose.Schema(
+  {
+    title: { type: String, required: true },   // 标题
+    content: { type: String, required: true }, // 正文
+  },
+  {
+    timestamps: true, // 自动带 createdAt / updatedAt
+  }
+);
+
+const Post = mongoose.model('Post', postSchema);
 
 // 3. 测试接口：GET /
 app.get('/', (req, res) => {
@@ -117,6 +133,58 @@ app.delete('/todos/:id', async (req, res) => {
       return res.status(404).json({ message: 'Todo 不存在' });
     }
 
+    res.json({ message: '删除成功' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+// 获取所有文章：GET /posts
+app.get('/posts', async (req, res) => {
+  try {
+    const posts = await Post.find().sort({ createdAt: -1 });
+    res.json(posts);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+// 创建文章：POST /posts
+app.post('/posts', async (req, res) => {
+  try {
+    const { title, content } = req.body;
+
+    if (!title || !content) {
+      return res.status(400).json({ message: 'title 和 content 都是必填的' });
+    }
+
+    const post = new Post({ title, content });
+    const saved = await post.save();
+    res.status(201).json(saved);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+// 获取单篇文章：GET /posts/:id
+app.get('/posts/:id', async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({ message: '文章不存在' });
+    res.json(post);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+// 删除文章：DELETE /posts/:id  （先简单做删除，之后可以加修改）
+app.delete('/posts/:id', async (req, res) => {
+  try {
+    const deleted = await Post.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ message: '文章不存在' });
     res.json({ message: '删除成功' });
   } catch (err) {
     console.error(err);
