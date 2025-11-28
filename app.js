@@ -1,4 +1,5 @@
 // app.js
+require('dotenv').config();
 
 const express = require('express');
 const mongoose = require('mongoose');
@@ -8,7 +9,7 @@ app.use(express.json());
 app.use(express.static('public'));
 
 // 1. 连接 MongoDB
-// 确保本地 MongoDB 在跑，默认端口 27017
+// 优先用环境变量中的 MongoDB 地址，没有的话就用本地 MongoDB
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/todo_db';
 
 mongoose
