@@ -1,5 +1,6 @@
 // app.js
 require('dotenv').config();
+const path = require('path');
 
 const express = require('express');
 const mongoose = require('mongoose');
@@ -32,7 +33,7 @@ const Todo = mongoose.model('Todo', todoSchema);
 
 // 3. 测试接口：GET /
 app.get('/', (req, res) => {
-  res.send('Todo Backend 正在运行（使用 MongoDB）');
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // 4. 创建 Todo：POST /todos
