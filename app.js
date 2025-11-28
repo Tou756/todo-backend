@@ -179,6 +179,29 @@ app.get('/posts/:id', async (req, res) => {
     res.status(500).json({ message: '服务器错误' });
   }
 });
+// 更新文章：PUT /posts/:id
+app.put('/posts/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, content, tags } = req.body;
+
+    const updated = await Post.findByIdAndUpdate(
+      id,
+      { title, content, tags },
+      { new: true }
+    );
+
+    if (!updated) {
+      return res.status(404).json({ message: '文章不存在' });
+    }
+
+    res.json(updated);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
 
 // 删除文章：DELETE /posts/:id  （先简单做删除，之后可以加修改）
 app.delete('/posts/:id', async (req, res) => {
