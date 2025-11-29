@@ -37,13 +37,33 @@ const Todo = mongoose.model('Todo', todoSchema);
 // 文章 Post 模型
 const postSchema = new mongoose.Schema(
   {
-    title: { type: String, required: true },   // 标题
-    content: { type: String, required: true }, // 正文
+    title: { type: String, required: true },
+    content: { type: String, default: '' },
+    tags: { type: [String], default: [] },
+
+    // 新增：封面图（图片地址）
+    coverImage: { type: String, default: '' },
+
+    // 新增：多媒体列表（可以是图片 / 视频 / 音频）
+    media: {
+      type: [
+        {
+          type: {
+            type: String,
+            enum: ['image', 'video', 'audio'],
+            required: true,
+          },
+          url: { type: String, required: true },
+        },
+      ],
+      default: [],
+    },
   },
   {
-    timestamps: true, // 自动带 createdAt / updatedAt
+    timestamps: true,
   }
 );
+
 
 const Post = mongoose.model('Post', postSchema);
 
@@ -153,20 +173,27 @@ app.get('/posts', async (req, res) => {
 // 创建文章：POST /posts
 app.post('/posts', async (req, res) => {
   try {
-    const { title, content } = req.body;
+    const { title, content, tags, coverImage, media } = req.body;
 
-    if (!title || !content) {
-      return res.status(400).json({ message: 'title 和 content 都是必填的' });
+    if (!title) {
+      return res.status(400).json({ message: 'title 是必填的' });
     }
 
-    const post = new Post({ title, content });
-    const saved = await post.save();
-    res.status(201).json(saved);
+    const doc = await Post.create({
+      title,
+      content,
+      tags,
+      coverImage,
+      media,
+    });
+
+    res.status(201).json(doc);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: '服务器错误' });
   }
 });
+
 
 // 获取单篇文章：GET /posts/:id
 app.get('/posts/:id', async (req, res) => {
