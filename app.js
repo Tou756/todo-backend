@@ -4,13 +4,28 @@ const path = require('path');
 
 const express = require('express');
 const mongoose = require('mongoose');
-const cors = require('cors');   // ← 新增这一行
+const cors = require('cors');
 
+// 新增：处理上传文件 & 接入 Cloudinary
+const multer = require('multer');
+const cloudinary = require('cloudinary').v2;
+const streamifier = require('streamifier'); // 没装的话：npm install streamifier
+
+// Cloudinary 配置（用环境变量）
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+// Multer：用内存存储（不写入磁盘）
+const upload = multer({ storage: multer.memoryStorage() });
 
 const app = express();
 app.use(express.json());
-app.use(cors());                // ← 新增这一行
+app.use(cors());
 app.use(express.static('public'));
+
 
 
 // 1. 连接 MongoDB
@@ -41,31 +56,58 @@ const postSchema = new mongoose.Schema(
     content: { type: String, default: '' },
     tags: { type: [String], default: [] },
 
-    // 新增：封面图（图片地址）
+    // 封面图
     coverImage: { type: String, default: '' },
 
-    // 新增：多媒体列表（可以是图片 / 视频 / 音频）
-    media: {
-      type: [
-        {
-          type: {
-            type: String,
-            enum: ['image', 'video', 'audio'],
-            required: true,
-          },
-          url: { type: String, required: true },
-        },
-      ],
-      default: [],
-    },
+    // 多媒体
+    media: [{
+      type: {
+        type: String,
+        enum: ['image', 'video', 'audio'],
+        required: true,
+      },
+      url: { type: String, required: true },
+    }],
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
 
 const Post = mongoose.model('Post', postSchema);
+// ====== 新增：文件上传接口 POST /upload ======
+app.post('/upload', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: '没有收到文件' });
+    }
+
+    // 使用 Cloudinary 的上传流，把内存里的 buffer 传过去
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        folder: 'shidagu-blog', // Cloudinary 中的文件夹名字，随便起
+        resource_type: 'auto',  // 自动识别图片/视频/音频
+      },
+      (error, result) => {
+        if (error) {
+          console.error('Cloudinary 上传失败:', error);
+          return res.status(500).json({ message: '上传失败' });
+        }
+        // 把 Cloudinary 给的访问地址返回给前端
+        return res.json({
+          url: result.secure_url,
+          public_id: result.public_id,
+          resource_type: result.resource_type,
+        });
+      }
+    );
+
+    // 把 multer 的 buffer 喂给 Cloudinary
+    streamifier.createReadStream(req.file.buffer).pipe(uploadStream);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
 
 // 3. 测试接口：GET /
 app.get('/', (req, res) => {
@@ -171,8 +213,15 @@ app.get('/posts', async (req, res) => {
 });
 
 // 创建文章：POST /posts
+// 创建文章：POST /posts
 app.post('/posts', async (req, res) => {
   try {
+    // 简单鉴权：检查请求头里的 X-Admin-Key
+    const key = req.headers['x-admin-key'];
+    if (key !== ADMIN_KEY) {
+      return res.status(401).json({ message: '未授权：缺少或错误的管理密钥' });
+    }
+
     const { title, content, tags, coverImage, media } = req.body;
 
     if (!title) {
