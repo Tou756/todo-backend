@@ -34,7 +34,12 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 const app = express();
 app.use(express.json());
-app.use(cors());
+app.use(
+  cors({
+    origin: ['https://shidagu.online', 'https://www.shidagu.online'],
+  })
+);
+
 app.use(express.static('public'));
 
 // 连接 MongoDB
