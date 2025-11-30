@@ -1,39 +1,20 @@
-// app.js
+// app.js  —— 稳定版（暂时不搞文件上传，只负责文章和 Todo）
+// 记得：Vercel 上要在环境变量里配置 MONGODB_URI
+
 require('dotenv').config();
 const path = require('path');
-
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 
-const multer = require('multer');
-const cloudinary = require('cloudinary').v2;
-const streamifier = require('streamifier');
-
 const app = express();
-app.use(express.json());
-app.use(cors());
-app.use(express.static('public'));
 
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+// 中间件
+app.use(cors());             // 解决跨域
+app.use(express.json());     // 解析 JSON 请求体
+app.use(express.static('public')); // 提供 public 里的静态文件（index.html、post.html、admin.html 等）
 
-// 内存存储
-const upload = multer({ storage: multer.memoryStorage() });
-
-// 管理密钥（和 admin.html 里的 ADMIN_KEY 一样）
-const ADMIN_KEY = process.env.ADMIN_KEY || 'dagu-admin-123';
-
-// ========== 基础中间件 ==========
-
-app.use(express.json());
-app.use(cors());
-app.use(express.static('public'));
-
-// ========== 连接 MongoDB ==========
+// 1. 连接 MongoDB
 const MONGODB_URI =
   process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/todo_db';
 
@@ -42,7 +23,7 @@ mongoose
   .then(() => console.log('✅ MongoDB 连接成功'))
   .catch((err) => console.error('❌ MongoDB 连接失败:', err));
 
-// ========== Mongoose 模型 ==========
+// 2. Todo 模型（暂时你没怎么用了，但我保留）
 const todoSchema = new mongoose.Schema(
   {
     title: { type: String, required: true },
@@ -53,16 +34,17 @@ const todoSchema = new mongoose.Schema(
 
 const Todo = mongoose.model('Todo', todoSchema);
 
+// 3. 文章 Post 模型（带封面 & 多媒体）
 const postSchema = new mongoose.Schema(
   {
     title: { type: String, required: true },
     content: { type: String, default: '' },
     tags: { type: [String], default: [] },
 
-    // 封面图
+    // 封面图 URL
     coverImage: { type: String, default: '' },
 
-    // 多媒体（图片 / 视频 / 音频）
+    // 多媒体：图片 / 视频 / 音频（全用 URL）
     media: [
       {
         type: {
@@ -79,44 +61,20 @@ const postSchema = new mongoose.Schema(
 
 const Post = mongoose.model('Post', postSchema);
 
-// ========== 上传接口：POST /upload ==========
-app.post('/upload', upload.single('file'), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ message: '没有收到文件' });
-  }
-
-  const uploadStream = cloudinary.uploader.upload_stream(
-    { folder: 'shidagu-blog', resource_type: 'auto' },
-    (error, result) => {
-      if (error) {
-        console.error('Cloudinary 上传失败:', error);
-        return res.status(500).json({ message: '上传失败' });
-      }
-      return res.json({
-        url: result.secure_url,
-        public_id: result.public_id,
-        resource_type: result.resource_type,
-      });
-    }
-  );
-
-  streamifier.createReadStream(req.file.buffer).pipe(uploadStream);
-});
-
-
-// ========== 首页：静态文件 ==========
+// 4. 首页：返回 public/index.html
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// ========== Todo 相关接口 ==========
+// ========== Todo 接口（可以不用管） ==========
 app.post('/todos', async (req, res) => {
   try {
     const { title, done } = req.body;
     if (!title) {
       return res.status(400).json({ message: 'title 是必填的' });
     }
-    const saved = await new Todo({ title, done }).save();
+    const todo = new Todo({ title, done });
+    const saved = await todo.save();
     res.status(201).json(saved);
   } catch (err) {
     console.error(err);
@@ -172,7 +130,8 @@ app.delete('/todos/:id', async (req, res) => {
   }
 });
 
-// ========== 文章相关接口 ==========
+// ========== 文章接口 ==========
+/** 获取所有文章 */
 app.get('/posts', async (req, res) => {
   try {
     const posts = await Post.find().sort({ createdAt: -1 });
@@ -183,15 +142,14 @@ app.get('/posts', async (req, res) => {
   }
 });
 
+/** 创建文章 */
 app.post('/posts', async (req, res) => {
   try {
-    const key = req.headers['x-admin-key'];
-    if (key !== ADMIN_KEY) {
-      return res.status(401).json({ message: '未授权：管理密钥错误' });
-    }
-
     const { title, content, tags, coverImage, media } = req.body;
-    if (!title) return res.status(400).json({ message: 'title 是必填的' });
+
+    if (!title) {
+      return res.status(400).json({ message: 'title 是必填的' });
+    }
 
     const doc = await Post.create({
       title,
@@ -208,7 +166,7 @@ app.post('/posts', async (req, res) => {
   }
 });
 
-
+/** 获取单篇文章 */
 app.get('/posts/:id', async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
@@ -220,6 +178,7 @@ app.get('/posts/:id', async (req, res) => {
   }
 });
 
+/** 更新文章 */
 app.put('/posts/:id', async (req, res) => {
   try {
     const { title, content, tags, coverImage, media } = req.body;
@@ -236,6 +195,7 @@ app.put('/posts/:id', async (req, res) => {
   }
 });
 
+/** 删除文章 */
 app.delete('/posts/:id', async (req, res) => {
   try {
     const deleted = await Post.findByIdAndDelete(req.params.id);
@@ -247,7 +207,7 @@ app.delete('/posts/:id', async (req, res) => {
   }
 });
 
-// ========== 启动服务器（本地调试用） ==========
+// 9. 启动服务器（本地开发用，Vercel 无视这里）
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`服务器已启动：http://localhost:${PORT}`);
