@@ -1,31 +1,34 @@
 // app.js
 require('dotenv').config();
 const path = require('path');
-const ADMIN_KEY = process.env.ADMIN_KEY || 'dagu123';
+
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 
-// ========== 上传相关：multer + Cloudinary ==========
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 const streamifier = require('streamifier');
 
-// 内存存储，不落地到磁盘
-const upload = multer({ storage: multer.memoryStorage() });
+const app = express();
+app.use(express.json());
+app.use(cors());
+app.use(express.static('public'));
 
-// 简单“管理密钥”（前端 admin.html 会带在 header 里）
-
-
-// Cloudinary 配置（记得在 .env / Vercel 环境变量里配好）
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+// 内存存储
+const upload = multer({ storage: multer.memoryStorage() });
+
+// 管理密钥（和 admin.html 里的 ADMIN_KEY 一样）
+const ADMIN_KEY = process.env.ADMIN_KEY || 'dagu-admin-123';
+
 // ========== 基础中间件 ==========
-const app = express();
+
 app.use(express.json());
 app.use(cors());
 app.use(express.static('public'));
@@ -77,38 +80,29 @@ const postSchema = new mongoose.Schema(
 const Post = mongoose.model('Post', postSchema);
 
 // ========== 上传接口：POST /upload ==========
-app.post('/upload', upload.single('file'), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ message: '没有收到文件' });
-    }
-
-    const uploadStream = cloudinary.uploader.upload_stream(
-      {
-        folder: 'shidagu-blog',
-        resource_type: 'auto', // 自动识别图片/视频/音频
-      },
-      (error, result) => {
-        if (error) {
-          console.error('Cloudinary 上传失败:', error);
-          return res.status(500).json({ message: '上传失败' });
-        }
-
-        return res.json({
-          url: result.secure_url,
-          public_id: result.public_id,
-          resource_type: result.resource_type,
-        });
-      }
-    );
-
-    // 把 buffer 喂给 Cloudinary
-    streamifier.createReadStream(req.file.buffer).pipe(uploadStream);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: '服务器错误' });
+app.post('/upload', upload.single('file'), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ message: '没有收到文件' });
   }
+
+  const uploadStream = cloudinary.uploader.upload_stream(
+    { folder: 'shidagu-blog', resource_type: 'auto' },
+    (error, result) => {
+      if (error) {
+        console.error('Cloudinary 上传失败:', error);
+        return res.status(500).json({ message: '上传失败' });
+      }
+      return res.json({
+        url: result.secure_url,
+        public_id: result.public_id,
+        resource_type: result.resource_type,
+      });
+    }
+  );
+
+  streamifier.createReadStream(req.file.buffer).pipe(uploadStream);
 });
+
 
 // ========== 首页：静态文件 ==========
 app.get('/', (req, res) => {
@@ -191,18 +185,13 @@ app.get('/posts', async (req, res) => {
 
 app.post('/posts', async (req, res) => {
   try {
-    // 简单“后台密码”
     const key = req.headers['x-admin-key'];
     if (key !== ADMIN_KEY) {
-      return res
-        .status(401)
-        .json({ message: '未授权：缺少或错误的管理密钥' });
+      return res.status(401).json({ message: '未授权：管理密钥错误' });
     }
 
     const { title, content, tags, coverImage, media } = req.body;
-    if (!title) {
-      return res.status(400).json({ message: 'title 是必填的' });
-    }
+    if (!title) return res.status(400).json({ message: 'title 是必填的' });
 
     const doc = await Post.create({
       title,
@@ -218,6 +207,7 @@ app.post('/posts', async (req, res) => {
     res.status(500).json({ message: '服务器错误' });
   }
 });
+
 
 app.get('/posts/:id', async (req, res) => {
   try {
