@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>写文章 - 大古的小站</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0f172a;
+      color: #e5e7eb;
+      line-height: 1.6;
+    }
+
+    .layout {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 24px 16px 80px;
+    }
+
+    a {
+      color: #38bdf8;
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    header {
+      margin-bottom: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    header h1 {
+      font-size: 22px;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      background: rgba(56, 189, 248, 0.15);
+      color: #38bdf8;
+    }
+
+    .card {
+      background: rgba(15, 23, 42, 0.9);
+      border-radius: 14px;
+      padding: 18px 20px;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      box-shadow: 0 18px 45px rgba(15, 23, 42, 0.8);
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 14px;
+      margin-bottom: 6px;
+      color: #e5e7eb;
+    }
+
+    input[type="text"],
+    textarea,
+    select {
+      width: 100%;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      background: rgba(15, 23, 42, 0.9);
+      color: #e5e7eb;
+      font-size: 14px;
+      outline: none;
+      margin-bottom: 12px;
+    }
+
+    textarea {
+      min-height: 160px;
+      resize: vertical;
+    }
+
+    .hint {
+      font-size: 12px;
+      color: #9ca3af;
+      margin-top: 4px;
+      margin-bottom: 14px;
+    }
+
+    button {
+      padding: 8px 18px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+      background: linear-gradient(to right, #38bdf8, #6366f1);
+      color: white;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .status {
+      margin-top: 10px;
+      font-size: 13px;
+      color: #9ca3af;
+    }
+
+    .media-item {
+      font-size: 13px;
+      color: #cbd5f5;
+      margin-bottom: 4px;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      background: rgba(55, 65, 81, 0.9);
+      margin-right: 6px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="layout">
+    <header>
+      <div>
+        <h1>写一篇新文章</h1>
+        <div class="hint">通过接口直接写到 MongoDB · 只有你自己知道管理密钥 😎</div>
+      </div>
+      <a href="/" class="tag">← 回到首页</a>
+    </header>
+
+    <div class="card">
+      <form id="post-form">
+        <label for="title">标题</label>
+        <input id="title" type="text" placeholder="比如：在 shidagu.online 上写的第二篇文章" required />
+
+        <label for="content">内容</label>
+        <textarea id="content" placeholder="随便写点今天的想法 / 笔记 / 心情..." required></textarea>
+
+        <label for="tags">标签（英文逗号分隔，可选）</label>
+        <input id="tags" type="text" placeholder="比如：diary, note" />
+
+        <label for="cover">封面图 URL（可选）</label>
+        <input id="cover" type="url" placeholder="https://example.com/a.jpg" />
+        <div class="hint">也可以留空，不写封面。</div>
+
+        <hr style="border:none;border-top:1px dashed rgba(148,163,184,0.4);margin:16px 0;">
+
+        <label>媒体列表（可选）</label>
+        <div class="hint">
+          每个媒体可以是 图片 / 视频 / 音频，对应一个 URL。<br>
+          你可以：<br>
+          · 先把文件传到图床 / 网盘（比如 Cloudinary、Imgur 等），然后把链接填进来。<br>
+          · 或者用下面的「从本地选择文件」按钮，把文件读成 data URL 直接保存到文章里（图片不要太大，建议 &lt; 2MB）。
+        </div>
+
+        <!-- 手动添加一个媒体（纯 URL） -->
+        <div style="margin-bottom: 10px;">
+          <select id="manual-media-type">
+            <option value="image">图片</option>
+            <option value="video">视频</option>
+            <option value="audio">音频</option>
+          </select>
+          <input id="manual-media-url" type="url" placeholder="https://你的文件链接" style="width:55%;margin-left:6px;">
+          <button type="button" id="add-media-btn" style="margin-left:6px;">+ 添加一个媒体</button>
+        </div>
+
+        <!-- 从本地选择文件，转成 data URL -->
+        <div style="margin-bottom: 12px;">
+          <input id="local-file" type="file" accept="image/*,audio/*,video/*" />
+          <button type="button" id="read-local-btn" style="margin-left:6px;">读取本地文件并添加</button>
+          <div class="hint">选择一张图片/音频/视频，本地读取后自动加入媒体列表（不会上传到第三方，只保存到自己的数据库）。</div>
+        </div>
+
+        <!-- 当前媒体列表预览 -->
+        <div id="media-list" style="margin-top:8px;margin-bottom:12px;font-size:13px;color:#e5e7eb;">
+          当前还没有媒体，你可以添加 URL 或者读取本地文件。
+        </div>
+
+        <button type="submit" id="submit-btn">发布</button>
+        <div class="status" id="status"></div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = '/api';
+
+
+    // 当前页面的管理密钥（只存在内存里）
+    let adminKey = '';
+
+    (function askAdminKey() {
+      const input = prompt('请输入管理密钥（用于发文章）：');
+      if (!input) {
+        alert('必须输入管理密钥才能发文章');
+        document.body.innerHTML = '<h2 style="text-align:center;margin-top:40px;">无权限访问</h2>';
+        throw new Error('no admin key');
+      }
+      adminKey = input;
+    })();
+
+    const form = document.getElementById('post-form');
+    const statusEl = document.getElementById('status');
+    const submitBtn = document.getElementById('submit-btn');
+    const mediaListEl = document.getElementById('media-list');
+
+    // 在内存里维护一个媒体数组
+    const mediaList = [];
+
+    function renderMediaList() {
+      if (mediaList.length === 0) {
+        mediaListEl.textContent = '当前还没有媒体，你可以添加 URL 或者读取本地文件。';
+        return;
+      }
+      mediaListEl.innerHTML = '';
+      mediaList.forEach((m, idx) => {
+        const div = document.createElement('div');
+        div.className = 'media-item';
+        div.innerHTML = `
+          <span class="pill">${m.type}</span>
+          <span>${m.url.slice(0, 80)}${m.url.length > 80 ? '...' : ''}</span>
+          <button type="button" data-idx="${idx}" style="margin-left:8px;font-size:11px;padding:2px 8px;border-radius:999px;border:none;cursor:pointer;">删除</button>
+        `;
+        mediaListEl.appendChild(div);
+      });
+
+      // 绑定删除按钮
+      mediaListEl.querySelectorAll('button[data-idx]').forEach(btn => {
+        btn.onclick = () => {
+          const i = parseInt(btn.getAttribute('data-idx'), 10);
+          mediaList.splice(i, 1);
+          renderMediaList();
+        };
+      });
+    }
+
+    // 手动添加一个媒体（URL）
+    document.getElementById('add-media-btn').addEventListener('click', () => {
+      const type = document.getElementById('manual-media-type').value;
+      const url = document.getElementById('manual-media-url').value.trim();
+      if (!url) {
+        alert('请输入媒体的 URL');
+        return;
+      }
+      if (mediaList.length >= 10) {
+        alert('媒体最多只能添加 10 个');
+        return;
+      }
+      mediaList.push({ type, url });
+      document.getElementById('manual-media-url').value = '';
+      renderMediaList();
+    });
+
+    // 从本地读文件 → 转成 data URL → 加进 mediaList
+    document.getElementById('read-local-btn').addEventListener('click', () => {
+      const fileInput = document.getElementById('local-file');
+      const file = fileInput.files[0];
+      if (!file) {
+        alert('请先选择一个文件');
+        return;
+      }
+
+      // 简单限制一下大小，避免把超大文件塞进数据库
+      if (file.size > 1024 * 1024 * 2) { // 2MB
+        alert('文件太大了，建议控制在 2MB 以内');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result; // 例如 data:image/png;base64,xxxx
+        let type = 'image';
+        if (file.type.startsWith('video/')) type = 'video';
+        if (file.type.startsWith('audio/')) type = 'audio';
+
+        mediaList.push({ type, url: dataUrl });
+        renderMediaList();
+        fileInput.value = '';
+      };
+      reader.onerror = () => {
+        alert('读取文件失败');
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // 提交文章
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const title = document.getElementById('title').value.trim();
+      const content = document.getElementById('content').value.trim();
+      const tagsRaw = document.getElementById('tags').value.trim();
+      const coverImage = document.getElementById('cover').value.trim();
+
+      if (!title || !content) {
+        statusEl.textContent = '标题和内容不能为空';
+        return;
+      }
+
+      const tags = tagsRaw
+        ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean).map(t => t.slice(0, 30))
+        : [];
+
+      submitBtn.disabled = true;
+      statusEl.textContent = '正在发布中…';
+
+      try {
+        const res = await fetch(`${API_BASE}/posts`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-key': adminKey,
+          },
+          body: JSON.stringify({
+            title,
+            content,
+            tags,
+            coverImage,
+            media: mediaList,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          console.log(data);
+          statusEl.textContent = data.message || '发布失败';
+          submitBtn.disabled = false;
+          return;
+        }
+
+        statusEl.textContent = '发布成功！3 秒后跳转到首页…';
+        form.reset();
+        mediaList.length = 0;
+        renderMediaList();
+
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 3000);
+      } catch (err) {
+        console.error(err);
+        statusEl.textContent = '网络错误，稍后再试';
+        submitBtn.disabled = false;
+      }
+    });
+
+    // 初始渲染媒体列表
+    renderMediaList();
+  </script>
+</body>
+
+</html>

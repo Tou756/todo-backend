@@ -1,4 +1,4 @@
-// app.js
+// api/index.js
 require('dotenv').config();
 const path = require('path');
 
@@ -13,21 +13,21 @@ const streamifier = require('streamifier');
 
 // ============== 配置区 ==============
 
-// MongoDB：优先用环境变量，其次本地
+// MongoDB：优先用环境变量
 const MONGODB_URI =
   process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/todo_db';
 
-// Cloudinary（记得在 Vercel / 本地 .env 里配好）
+// Cloudinary
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME || '',
   api_key: process.env.CLOUDINARY_API_KEY || '',
   api_secret: process.env.CLOUDINARY_API_SECRET || '',
 });
 
-// 管理密钥：发文章、上传用的简单“密码”
+// 管理密钥
 const ADMIN_KEY = process.env.ADMIN_KEY || 'dagu-admin-key';
 
-// Multer：用内存存储
+// Multer 内存存储
 const upload = multer({ storage: multer.memoryStorage() });
 
 // ============== 初始化 ==============
@@ -35,15 +35,13 @@ const upload = multer({ storage: multer.memoryStorage() });
 const app = express();
 app.use(express.json());
 
-// 如果前端和后端部署在同一个域名，其实甚至可以不需要 cors
+// Vercel 上一般前后端同域，这里简单允许同源请求
 app.use(
   cors({
-    origin: ['https://shidagu.online', 'https://www.shidagu.online', 'http://localhost:3000'],
+    origin: true,
+    credentials: true,
   })
 );
-
-// 静态文件目录
-app.use(express.static('public'));
 
 // 连接 MongoDB
 mongoose
@@ -53,7 +51,7 @@ mongoose
 
 // ============== 数据模型 ==============
 
-// Todo 示例
+// Todo
 const todoSchema = new mongoose.Schema(
   {
     title: { type: String, required: true },
@@ -61,20 +59,15 @@ const todoSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
 const Todo = mongoose.model('Todo', todoSchema);
 
-// 博客文章
+// 文章
 const postSchema = new mongoose.Schema(
   {
     title: { type: String, required: true },
     content: { type: String, default: '' },
     tags: { type: [String], default: [] },
-
-    // 封面图
     coverImage: { type: String, default: '' },
-
-    // 多媒体（图片 / 视频 / 音频）
     media: [
       {
         type: {
@@ -88,23 +81,9 @@ const postSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
 const Post = mongoose.model('Post', postSchema);
 
-// ============== 静态页面 ==============
-
-// 首页（文章列表）
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-// 写文章页面
-app.get('/admin.html', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
-});
-
-// ============== 上传接口（可选：给 admin.html 用）=============
-
+// ============== 上传接口 ==============
 app.post('/upload', upload.single('file'), async (req, res) => {
   try {
     const key = req.headers['x-admin-key'];
@@ -142,8 +121,6 @@ app.post('/upload', upload.single('file'), async (req, res) => {
 });
 
 // ============== Todo 接口 ==============
-
-// 创建 Todo
 app.post('/todos', async (req, res) => {
   try {
     const { title, done } = req.body;
@@ -157,7 +134,6 @@ app.post('/todos', async (req, res) => {
   }
 });
 
-// 获取所有 Todo
 app.get('/todos', async (req, res) => {
   try {
     const todos = await Todo.find().sort({ createdAt: -1 });
@@ -168,7 +144,6 @@ app.get('/todos', async (req, res) => {
   }
 });
 
-// 更新 Todo（只改 done 字段）
 app.put('/todos/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -191,7 +166,6 @@ app.put('/todos/:id', async (req, res) => {
   }
 });
 
-// 删除 Todo
 app.delete('/todos/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -206,20 +180,17 @@ app.delete('/todos/:id', async (req, res) => {
   }
 });
 
-// ============== 博客文章接口 ==============
-
-// 获取所有文章：GET /posts
+// ============== 文章接口 ==============
 app.get('/posts', async (req, res) => {
   try {
     const posts = await Post.find().sort({ createdAt: -1 });
-    res.json(posts); // 前端期望的是“数组”
+    res.json(posts);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: '服务器错误' });
   }
 });
 
-// 创建文章：POST /posts
 app.post('/posts', async (req, res) => {
   try {
     const key = req.headers['x-admin-key'];
@@ -247,7 +218,6 @@ app.post('/posts', async (req, res) => {
   }
 });
 
-// 获取单篇文章
 app.get('/posts/:id', async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
@@ -259,7 +229,6 @@ app.get('/posts/:id', async (req, res) => {
   }
 });
 
-// 更新文章
 app.put('/posts/:id', async (req, res) => {
   try {
     const key = req.headers['x-admin-key'];
@@ -287,7 +256,6 @@ app.put('/posts/:id', async (req, res) => {
   }
 });
 
-// 删除文章
 app.delete('/posts/:id', async (req, res) => {
   try {
     const key = req.headers['x-admin-key'];
@@ -304,9 +272,5 @@ app.delete('/posts/:id', async (req, res) => {
   }
 });
 
-// ============== 启动服务器 ==============
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`服务器已启动：http://localhost:${PORT}`);
-});
+// 关键：导出给 Vercel 使用（不要 app.listen）
+module.exports = app;

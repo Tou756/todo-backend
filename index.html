@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>大古的自留地</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0f172a;
+      color: #e5e7eb;
+      line-height: 1.6;
+    }
+
+    .layout {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 24px 16px 80px;
+    }
+
+    header {
+      padding: 16px 0 24px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.3);
+      margin-bottom: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    header h1 {
+      font-size: 24px;
+      color: #f9fafb;
+    }
+
+    header p {
+      font-size: 14px;
+      color: #9ca3af;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      background: rgba(56, 189, 248, 0.15);
+      color: #38bdf8;
+      text-decoration: none;
+    }
+
+    .tag:hover {
+      text-decoration: underline;
+      box-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+      gap: 24px;
+    }
+
+    @media (max-width: 768px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: rgba(15, 23, 42, 0.9);
+      border-radius: 14px;
+      padding: 16px 18px;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      box-shadow: 0 18px 45px rgba(15, 23, 42, 0.8);
+      margin-bottom: 16px;
+    }
+
+    .card h2 {
+      font-size: 18px;
+      margin-bottom: 8px;
+      color: #f9fafb;
+    }
+
+    .card small {
+      font-size: 12px;
+      color: #9ca3af;
+    }
+
+    .post-list {
+      list-style: none;
+      margin-top: 8px;
+    }
+
+    .post-list li {
+      padding: 10px 0;
+      border-bottom: 1px dashed rgba(51, 65, 85, 0.7);
+      cursor: pointer;
+    }
+
+    .post-list li:last-child {
+      border-bottom: none;
+    }
+
+    .post-list li:hover {
+      background: rgba(30, 41, 59, 0.5);
+      transition: background 0.2s;
+    }
+
+    .post-title {
+      font-size: 15px;
+      color: #e5e7eb;
+      font-weight: 500;
+    }
+
+    .post-meta {
+      font-size: 12px;
+      color: #9ca3af;
+    }
+
+    .post-tags span {
+      display: inline-block;
+      margin-top: 4px;
+      margin-right: 6px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      background: rgba(55, 65, 81, 0.9);
+      color: #e5e7eb;
+    }
+
+    .about p {
+      font-size: 14px;
+      color: #dbeafe;
+      margin-bottom: 6px;
+    }
+
+    .links a {
+      display: inline-block;
+      margin-right: 8px;
+      margin-top: 6px;
+      font-size: 13px;
+      color: #38bdf8;
+      text-decoration: none;
+    }
+
+    .links a:hover {
+      text-decoration: underline;
+    }
+
+    footer {
+      margin-top: 40px;
+      text-align: center;
+      font-size: 12px;
+      color: #6b7280;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="layout">
+    <header>
+      <div>
+        <h1>大古的自留地</h1>
+        <p>记录一点生活、技术，还有乱七八糟的想法。</p>
+      </div>
+      <div>
+        <span class="tag">个人博客 · shidagu.online</span>
+        <a href="/admin.html" class="tag" style="margin-left:8px;">写文章</a>
+        <a href="/todos.html" class="tag" style="margin-left:8px;">Todo 小工具</a>
+      </div>
+    </header>
+
+    <main>
+      <!-- 左侧：文章列表 -->
+      <section>
+        <div class="card">
+          <h2>最新文章</h2>
+          <small>下面是从数据库里读出来的文章列表 👇</small>
+          <ul class="post-list" id="post-list"></ul>
+        </div>
+      </section>
+
+      <!-- 右侧：关于我 / 小资料 -->
+      <aside>
+        <div class="card about">
+          <h2>关于我</h2>
+          <p>🧑‍💻 一个正在学习编程的人。</p>
+          <p>🎯 目标：能独立完成自己想做的网站 / 小工具。</p>
+          <p>📍 这里是我的小角落，用来试验各种想法。</p>
+        </div>
+
+        <div class="card">
+          <h2>小卡片 / 状态</h2>
+          <p class="post-meta">现在在学：</p>
+          <p>· Node.js 后端 · MongoDB 数据库 · 前端基础</p>
+          <p class="post-meta" style="margin-top:8px;">想做的一些东西：</p>
+          <p>· 像 QQ 空间一样的个人空间<br>· 记录学习轨迹的时间线<br>· 以后也许还有评论区</p>
+        </div>
+
+        <div class="card links">
+          <h2>联系</h2>
+          <a href="mailto:shidaguya@proton.me">📮 邮箱</a>
+        </div>
+      </aside>
+    </main>
+
+    <footer>
+      © <span id="year"></span> shidagu.online · 大古的自留地
+    </footer>
+  </div>
+
+  <script>
+    // 底部年份
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    const API_BASE = '/api';
+
+
+    async function loadPosts() {
+      const listEl = document.getElementById('post-list');
+      listEl.innerText = '加载中…';
+
+      try {
+        const res = await fetch(`${API_BASE}/posts`);
+        const data = await res.json();
+
+        if (!Array.isArray(data)) {
+          listEl.innerText = '数据格式不对';
+          console.warn('返回的数据不是数组：', data);
+          return;
+        }
+
+        if (data.length === 0) {
+          listEl.innerText = '还没有文章，先在 /admin.html 里发一篇试试吧～';
+          return;
+        }
+
+        // 按时间排序（保险一点）
+        data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        listEl.innerHTML = '';
+
+        data.forEach(post => {
+          const li = document.createElement('li');
+
+          const link = document.createElement('a');
+          link.href = `/post.html?id=${post._id}`;
+          link.style.textDecoration = 'none';
+          link.style.color = 'inherit';
+
+          const titleDiv = document.createElement('div');
+          titleDiv.className = 'post-title';
+          const titleText = post.title || '无标题';
+          titleDiv.textContent = titleText.length > 40
+            ? titleText.slice(0, 40) + '…'
+            : titleText;
+
+          const metaDiv = document.createElement('div');
+          metaDiv.className = 'post-meta';
+          if (post.createdAt && !isNaN(Date.parse(post.createdAt))) {
+            const d = new Date(post.createdAt);
+            metaDiv.textContent = d.toLocaleDateString('zh-CN', {
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit'
+            });
+          } else {
+            metaDiv.textContent = '';
+          }
+
+          const tagsDiv = document.createElement('div');
+          tagsDiv.className = 'post-tags';
+          if (Array.isArray(post.tags) && post.tags.length > 0) {
+            post.tags.forEach(t => {
+              const span = document.createElement('span');
+              span.textContent = t;
+              tagsDiv.appendChild(span);
+            });
+          } else {
+            const span = document.createElement('span');
+            span.textContent = '文章';
+            tagsDiv.appendChild(span);
+          }
+
+          link.appendChild(titleDiv);
+          link.appendChild(metaDiv);
+          link.appendChild(tagsDiv);
+
+          li.appendChild(link);
+          listEl.appendChild(li);
+        });
+
+      } catch (err) {
+        console.error(err);
+        listEl.innerText = '加载失败（打开 F12 控制台看看错误信息）';
+      }
+    }
+
+    loadPosts();
+  </script>
+</body>
+
+</html>
